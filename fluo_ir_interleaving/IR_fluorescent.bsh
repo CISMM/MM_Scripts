@@ -1,0 +1,74 @@
+// v1.0
+// Description
+// -----------
+// The script makes two cameras (different brands) take images in an interleaving manner.
+// Resulting images are stored in two stacks, one from each camera.
+// If needed, a camera can be set so it would skip every n frames to avoid phototoxicity
+// during long experiments.
+// 
+// Joe Hsiao 12/2/2016
+
+// User-Input Section
+// ------------------
+numFrames = 20;                        // total number of frames to acquire
+int[] exposures = {30, 100};           // {IR, fluo} exposure time
+int fluo_skip_every_n_frames = 5;      // skip every n frames on fluo channel
+saveDir = "f:/joe";                    // saved images location
+
+// Program starts here
+// -------------------
+import org.micromanager.api.AcquisitionOptions;
+
+rest_before_next_frame_Ms = 0;
+
+String[] acqNames = {"IR", "fluorescent"};
+String[] cameras  = {"IDS uEye", "Cascade"};
+String[] channels = {"IDS uEye_IR", "Cascade_fluorescent"};
+Color[] colors = {Color.GREEN, Color.RED};
+numSlices = 1;
+channelGroup = "IR_fluorescent";
+
+// clear all previous acquisitions
+gui.closeAllAcquisitions();
+gui.clearMessageWindow();
+
+// create acquisition and set options
+gui.openAcquisition(acqNames[0], saveDir, numFrames, 1, numSlices);
+gui.openAcquisition(acqNames[1], saveDir, numFrames, 1, numSlices);
+
+gui.setChannelColor(acqNames[0], 0, colors[0]);
+gui.setChannelColor(acqNames[1], 0, colors[1]);
+
+gui.setChannelName(acqNames[0], 0, channels[0]);
+gui.setChannelName(acqNames[1], 0, channels[1]);
+
+for (int i=0; i<numFrames; i++) {
+
+   // IR settings
+   mmc.setCameraDevice(cameras[0]);
+	mmc.setExposure(exposures[0]);
+   gui.message("Acquiring frame " + i + ", stack " + acqNames[0] + ".");
+   mmc.setConfig(channelGroup, channels[0]);
+   mmc.setShutterOpen(true);
+   mmc.waitForConfig(channelGroup, channels[0]);
+   gui.snapAndAddImage(acqNames[0], i, 0, 0, 0);
+
+	if (i % (fluo_skip_every_n_frames+1) == 0) {
+	   // fluorescent settings
+	   mmc.setCameraDevice(cameras[1]);
+		mmc.setExposure(exposures[1]);
+	   gui.message("Acquiring frame " + i + ", stack " + acqNames[1] + ".");
+	   mmc.setConfig(channelGroup, channels[1]);
+	   mmc.waitForConfig(channelGroup, channels[1]);
+	   gui.snapAndAddImage(acqNames[1], i, 0, 0, 0);
+	} else {
+		gui.sleep(exposures[1]);
+	}
+	
+   // set channel contrast based on the first frame
+   if (i==0) {
+      gui.setContrastBasedOnFrame(acqNames[0], i, 0);
+      gui.setContrastBasedOnFrame(acqNames[1], i, 0);
+   }
+   gui.sleep(rest_before_next_frame_Ms);
+}
