@@ -1,0 +1,16 @@
+// User-Input Section
+// ------------------
+focus_volt = 40;
+collimation_volt = 50;
+
+
+// Program starts
+// --------------
+addClassPath( "./scripts/Optotune-ETL.jar" );
+import cismm.ETLControlForm;
+
+ETLControlForm etl = new ETLControlForm(mmc);
+
+etl.set_current("COM5", 0);
+
+
