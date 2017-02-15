@@ -1,16 +1,98 @@
 // User-Input Section
 // ------------------
-focus_volt = 40;
-collimation_volt = 50;
+imaging_exposure_ms = 200;         // exposure time when during imaging frames (no photoactivation)
+imaging_frames = 600;              // total number of frames in whole video
 
+photoactivation_exposure_ms = 5000; // exposure for photoactivation frames
+photoactivation_begins_frame = 10; // at which frame to start photoactivation during acquisition
+photoactivation_end_frame = 600;    // at which frame to end photoactivation
+
+focus_volt = -18;        // ETL input volt that makes laser focus on specimen
+collimation_volt = 90;  // ETL input volt that makes laser collimated
+save_dir = "f:/joe";    // location to save images
+
+rest_before_next_frame_ms = 0;
 
 // Program starts
 // --------------
+//config_file = "photoactivation_center_point.cfg";
+//mmc.loadSystemConfiguration(config_file);
+
 addClassPath( "./scripts/Optotune-ETL.jar" );
 import cismm.ETLControlForm;
-
 ETLControlForm etl = new ETLControlForm(mmc);
 
-etl.set_current("COM5", 0);
+ETL_port = "COM3";
 
+group = "Photoactivation";
+String[] stack_names = {"Activation", "Cell", "Beads"};
+String[] presets = {"Activation", "Cell", "Beads", "Off"};
+Color[]  channel_colors = {Color.WHITE, Color.GREEN, Color.RED};
 
+// clear all previous acquisitions
+gui.closeAllAcquisitions();
+gui.clearMessageWindow();
+
+// create acquisition and set options
+gui.openAcquisition(stack_names[0], save_dir, imaging_frames, 1, 1);
+gui.openAcquisition(stack_names[1], save_dir, imaging_frames, 1, 1);
+gui.openAcquisition(stack_names[2], save_dir, imaging_frames, 1, 1);
+
+gui.setChannelColor(stack_names[0], 0, channel_colors[0]);
+gui.setChannelColor(stack_names[1], 0, channel_colors[1]);
+gui.setChannelColor(stack_names[2], 0, channel_colors[2]);
+
+gui.setChannelName(stack_names[0], 0, presets[0]);
+gui.setChannelName(stack_names[1], 0, presets[1]);
+gui.setChannelName(stack_names[2], 0, presets[2]);
+
+long[] switchMs = new long[intervalMs.length]; 
+switchMs[0] = intervalMs[0]; 
+for (int i=1; i<intervalMs.length; i++) 
+    switchMs[i] = switchMs[i-1] + intervalMs[i]; 
+
+// loop on steps 
+for (int i=0; i<intervalMs.length; i++) { 
+   now = System.currentTimeMillis(); 
+
+   // do stuff 
+   gui.sleep(50); 
+        print ((now - tStart)/1); 
+
+   long waitMs = switchMs[i] - (System.currentTimeMillis() - tStart); 
+   gui.sleep(waitMs); 
+} 
+
+for (int i=0; i<imaging_frames; i++) {
+  
+	gui.message("Acquiring frame " + i + ", stack " + stack_names[0] + ".");
+	mmc.setExposure(photoactivation_exposure_ms);	
+		
+	if (i >= photoactivation_begins_frame-1 &&
+	    i <= photoactivation_end_frame-1) {	
+		mmc.setConfig(group, presets[0]);
+		etl.set_current(ETL_port, focus_volt);
+		mmc.waitForConfig(group, presets[0]);
+	} else {
+		mmc.setConfig(group, presets[3]);
+		mmc.waitForConfig(group, presets[3]);	
+	}
+	gui.snapAndAddImage(stack_names[0], i, 0, 0, 0);
+	
+	
+	for (int j=1; j<=2; j++) {
+		gui.message("Acquiring frame " + i + ", stack " + stack_names[j] + ".");
+		mmc.setExposure(imaging_exposure_ms);
+		mmc.setConfig(group, presets[j]);
+		etl.set_current(ETL_port, collimation_volt);
+		mmc.waitForConfig(group, presets[j]);
+		gui.snapAndAddImage(stack_names[j], i, 0, 0, 0);
+	}
+   
+	// set channel contrast based on the first frame
+	if (i==0) {
+		gui.setContrastBasedOnFrame(stack_names[1], i, 0);
+		gui.setContrastBasedOnFrame(stack_names[2], i, 0);
+	}
+	gui.sleep(rest_before_next_frame_ms);
+}

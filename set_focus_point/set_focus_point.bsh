@@ -1,0 +1,38 @@
+focus_x = 300;   // range (25 - 483)
+focus_y = 400;   // range (25 - 483)
+
+import cismm.MirrorControlForm; 
+import cismm.DualAxisMirrorPlugin;
+import org.micromanager.utils.ReportingUtils;
+
+mcf = new MirrorControlForm(mmc, gui);
+
+if (mcf.point_to(focus_x, focus_y, "FRAP") == false) {
+	ReportingUtils.showMessage("Cannot reach target point, reuquire calibration.");
+}
+gui.sleep(500);
+mcf.del_daq_bins();
+/*
+plugin = new DualAxisMirrorPlugin();
+plugin.setApp(gui);
+plugin.show();
+*/
+//import ij.IJ;
+//import ij.ImagePlus;
+
+/*
+a = new int[4][1];
+mmc.getROI(a[0],a[1],a[2],a[3]);
+int[] roiRect = {a[0][0],a[1][0],a[2][0],a[3][0]};
+print(a[2][0]);
+*/
+/*
+import ij.ImagePlus;
+import ij.gui.PointRoi;
+a = ij.ImagePlus.getRoi();
+*/
+//print(a.getRoi().getBounds());
+
+//print(( PointRoi )(new ImagePlus.getRoi().getBounds())[2][0]);
+
+
