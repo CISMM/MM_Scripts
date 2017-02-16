@@ -1,17 +1,27 @@
-focus_x = 300;   // range (25 - 483)
-focus_y = 400;   // range (25 - 483)
+focus_x = 334;   // range (25 - 483)
+focus_y = 183;   // range (25 - 483)
 
 import cismm.MirrorControlForm; 
 import cismm.DualAxisMirrorPlugin;
 import org.micromanager.utils.ReportingUtils;
+import java.text.DecimalFormat;
 
 mcf = new MirrorControlForm(mmc, gui);
 
-if (mcf.point_to(focus_x, focus_y, "FRAP") == false) {
+res = new double[]{0,0,0};
+res = mcf.point_to(focus_x, focus_y, "FRAP");
+if (res[2] == 0) {
 	ReportingUtils.showMessage("Cannot reach target point, reuquire calibration.");
+} else {
+	print("(x, y) voltage is at ("+
+			 new DecimalFormat("#0.00").format(res[0])+", "+
+			 new DecimalFormat("#0.00").format(res[1])+")\n");
 }
-gui.sleep(500);
-mcf.del_daq_bins();
+
+//gui.sleep(500);
+//mcf.del_daq_bins();
+
+
 /*
 plugin = new DualAxisMirrorPlugin();
 plugin.setApp(gui);
